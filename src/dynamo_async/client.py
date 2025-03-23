@@ -3,7 +3,7 @@ import datetime
 import logging
 import random
 import threading
-import weakref
+
 from os import environ
 from typing import Any, Awaitable, Callable, Dict, Literal, Optional, Tuple
 
