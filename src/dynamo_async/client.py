@@ -1,9 +1,7 @@
 import asyncio
-import atexit
 import datetime
 import logging
 import random
-import signal
 import threading
 import weakref
 from os import environ
@@ -19,33 +17,9 @@ logger = logging.getLogger("dynio")
 logger.addHandler(logging.NullHandler())
 
 
-DYNIO_CLIENTS: weakref.WeakValueDictionary[int, "DynamoAsyncClient"] = (
-    weakref.WeakValueDictionary()
-)
-
-
 class DynamoDBError(Exception):
     pass
 
-
-def cleanup():
-    for _, client in DYNIO_CLIENTS.items():
-        client.stop_refresh_thread()
-        try:
-            loop = asyncio.get_running_loop()
-            loop.run_until_complete(client.client.close())
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(client.client.close())
-
-
-def handle_exit(signum, frame):  # type: ignore
-    cleanup()
-
-
-signal.signal(signal.SIGINT, handle_exit)  # type: ignore
-signal.signal(signal.SIGTERM, handle_exit)  # type: ignore
-atexit.register(cleanup)
 
 json_encoder = msgspec.json.Encoder()
 json_decoder = msgspec.json.Decoder()
@@ -274,8 +248,6 @@ class DynamoAsyncClient:
 
                     else:
                         self.client = aiohttp.ClientSession()
-
-                    DYNIO_CLIENTS[id(self)] = self
 
         if not self.access_key or not self.secret_key:
             raise ValueError("No credentials")
