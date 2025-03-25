@@ -1,7 +1,7 @@
 [project]
 name = "dynamo_async"
 version = "0.1.0"
-description = "Asyncronous DynamoDB Client"
+description = "Asynchronous Python client for Amazon DynamoDB"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
