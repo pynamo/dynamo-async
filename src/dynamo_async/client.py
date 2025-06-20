@@ -132,11 +132,13 @@ class DynamoAsyncClient:
             else:
                 if credentials:
                     logging.debug("Using ecs credentials")
-                    credentials = json_decoder.decode(credentials).decode()
+                    credentials = json_decoder.decode(credentials)
                     self.access_key = credentials["AccessKeyId"]
                     self.secret_key = credentials["SecretAccessKey"]
                     self.session_token = credentials["Token"]
-                    self.expiration = credentials["Expiration"]
+                    self.expiration = datetime.datetime.fromisoformat(
+                        credentials["Expiration"]
+                    )
                     self.aws_environment = "ecs"
                     self.start_refresh_thread(self.task_refresh_credentials)
 
@@ -149,11 +151,13 @@ class DynamoAsyncClient:
         else:
             if credentials:
                 logging.debug("Using ec2 credentials")
-                credentials = json_decoder.decode(credentials).decode()
+                credentials = json_decoder.decode(credentials)
                 self.access_key = credentials["AccessKeyId"]
                 self.secret_key = credentials["SecretAccessKey"]
                 self.session_token = credentials["Token"]
-                self.expiration = credentials["Expiration"]
+                self.expiration = datetime.datetime.fromisoformat(
+                    credentials["Expiration"]
+                )
                 self.aws_environment = "ec2"
                 self.start_refresh_thread(self.task_refresh_credentials)
 

@@ -22,7 +22,7 @@ def ec2_credentials() -> str:
         token = response.read().decode()
         conn.request(
             "GET",
-            "/latest/meta-data/security-credentials",
+            "/latest/meta-data/iam/security-credentials",
             headers={
                 "x-aws-ec2-metadata-token": token,
             },
