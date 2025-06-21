@@ -2,14 +2,6 @@
 
 Asynchronous Python client for Amazon DynamoDB.
 
-## Features
-
-- **Async-first** — Built on `asyncio` and `aiohttp`
-- **AWS Signature v4** — Fully compatible with AWS DynamoDB authentication
-- **Automatic Retries** — Handles transient AWS errors gracefully
-
----
-
 ## Example Usage
 
 ```python
@@ -20,7 +12,9 @@ dynamodb_client = DynamoAsyncClient(
 	secret_key="...",
 )
 
-await client.get_item(TableName=...)
+await dynamodb_client.get_item(
+	{"TableName": "my-table", "Key": {"id": {"S": "123"}}}
+)
 ```
 
 #### Customize the aiohttp client session
@@ -41,7 +35,20 @@ dynamodb_client = DynamoAsyncClient(
 	...,
 )
 
-result = await client.get_item(
+result = await dynamodb_client.get_item(
 	{"TableName": "my-table", "Key": {"id": {"S": "123"}}}
+)
+```
+
+## Authentication
+
+If deployed on EC2 or ECS, `dynamo-async` will automatically
+use the meta-data services for token access, assuming an iam-role with
+correct permissions is assigned. In those cases, just specify the region:
+
+```python
+from dynamo_async import DynamoAsyncClient
+dynamodb_client = DynamoAsyncClient(
+	region="us-east-1",
 )
 ```
