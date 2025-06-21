@@ -93,7 +93,7 @@ class DynamoAsyncClient:
         self.refresh_thread: Optional[threading.Thread] = None
 
         if self.access_key and self.secret_key:
-            logging.debug("Using defined AWS access_key and secret_key")
+            self.logger.debug("Using defined AWS access_key and secret_key")
         else:
             self.credential_search()
 
@@ -101,7 +101,7 @@ class DynamoAsyncClient:
         if not self.logger.hasHandlers():
             handler = logging.StreamHandler()
             formatter = logging.Formatter(
-                "[%(levelname)s] %(message)s (%(filename)s:%(lineno)d)"
+                "[%(levelname)s] [%(name)s] %(message)s (%(filename)s:%(lineno)d)"
             )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
@@ -134,17 +134,17 @@ class DynamoAsyncClient:
             self.access_key = environ["AWS_ACCESS_KEY_ID"]
             self.secret_key = environ["AWS_SECRET_ACCESS_KEY"]
             self.session_token = environ.get("AWS_SESSION_TOKEN")
-            logging.debug("Using env AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY")
+            self.logger.debug("Using env AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY")
             return
 
         if environ.get("AWS_CONTAINER_CREDENTIALS_FULL_URI"):
             try:
                 credentials = ecs.ecs_credentials()
             except Exception as err:
-                logging.debug(f"ECS credential error: {err}")
+                self.logger.error(f"ECS credential error: {err}")
             else:
                 if credentials:
-                    logging.debug("Using ecs credentials")
+                    self.logger.debug("Using ecs credentials")
                     credentials = json_decoder.decode(credentials)
                     self.access_key = credentials["AccessKeyId"]
                     self.secret_key = credentials["SecretAccessKey"]
@@ -160,10 +160,10 @@ class DynamoAsyncClient:
         try:
             credentials = ec2.ec2_credentials()
         except Exception as err:
-            logging.debug(f"EC2 credential error: {err}")
+            self.logger.error(f"EC2 credential error: {err}")
         else:
             if credentials:
-                logging.debug("Using ec2 credentials")
+                self.logger.debug("Using ec2 credentials")
                 credentials = json_decoder.decode(credentials)
                 self.access_key = credentials["AccessKeyId"]
                 self.secret_key = credentials["SecretAccessKey"]
@@ -206,13 +206,13 @@ class DynamoAsyncClient:
 
             try:
                 res_body = credential_func()
-                credentials = json_decoder.decode(res_body).decode()
+                credentials = json_decoder.decode(res_body)
                 self.access_key = credentials["AccessKeyId"]
                 self.secret_key = credentials["SecretAccessKey"]
                 self.session_token = credentials["Token"]
                 self.expiration = credentials["Expiration"]
-            except Exception as e:
-                self.logger.debug(f"Failed to refresh credentials (ec2): {e}")
+            except Exception as err:
+                self.logger.error(f"Failed to refresh credentials (ec2): {err}")
                 # Retry with exponential backoff
                 for i in range(5):
                     if self.shutdown_event.is_set():
@@ -225,7 +225,7 @@ class DynamoAsyncClient:
                     try:
                         res_body = credential_func()
 
-                        credentials = json_decoder.decode(res_body).decode()
+                        credentials = json_decoder.decode(res_body)
                         self.access_key = credentials["AccessKeyId"]
                         self.secret_key = credentials["SecretAccessKey"]
                         self.session_token = credentials["Token"]
@@ -233,9 +233,9 @@ class DynamoAsyncClient:
                         break
 
                     except Exception as e:
-                        self.logger.debug(f"Retrying failed: {e}")
+                        self.logger.error(f"Retrying failed: {e}")
                 else:
-                    self.logger.debug(
+                    self.logger.error(
                         "Failed to refresh credentials after multiple attempts"
                     )
 
@@ -258,9 +258,9 @@ class DynamoAsyncClient:
         if not hasattr(self, "client"):
             async with self.client_factory_lock:
                 if not hasattr(self, "client"):
-                    logging.debug("Setting up client")
+                    self.logger.debug("Setting up client")
                     if self.client_factory:
-                        logging.debug("User defined client_factory")
+                        self.logger.debug("User defined client_factory")
                         self.client = await self.client_factory()
 
                     else:
