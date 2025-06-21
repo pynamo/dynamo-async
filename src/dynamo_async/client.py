@@ -13,9 +13,6 @@ import msgspec
 from . import ec2, ecs
 from .signer import sign_request
 
-logger = logging.getLogger("dynio")
-logger.addHandler(logging.NullHandler())
-
 
 class DynamoDBError(Exception):
     pass
@@ -64,8 +61,13 @@ class DynamoAsyncClient:
         user_agent: str = "DynamoAsyncClient/0.1.0",
         max_retries: int = 5,
         base_backoff: float = 0.05,
+        log_level: Optional[str] = None,
     ):
         self.region = region
+
+        self.logger = logging.getLogger("DynamoAsyncClient")
+        if log_level:
+            self.enable_logging(log_level)
 
         self.endpoint = endpoint or f"https://dynamodb.{region}.amazonaws.com/"
 
@@ -94,6 +96,17 @@ class DynamoAsyncClient:
             logging.debug("Using defined AWS access_key and secret_key")
         else:
             self.credential_search()
+
+    def enable_logging(self, level: str):
+        if not self.logger.hasHandlers():
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                "[%(levelname)s] %(message)s (%(filename)s:%(lineno)d)"
+            )
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+
+        self.logger.setLevel(getattr(logging, level.upper(), logging.DEBUG))
 
     def start_refresh_thread(self, target: Callable[[], None]) -> None:
         if self.refresh_thread and self.refresh_thread.is_alive():
@@ -199,14 +212,14 @@ class DynamoAsyncClient:
                 self.session_token = credentials["Token"]
                 self.expiration = credentials["Expiration"]
             except Exception as e:
-                logger.debug(f"Failed to refresh credentials (ec2): {e}")
+                self.logger.debug(f"Failed to refresh credentials (ec2): {e}")
                 # Retry with exponential backoff
                 for i in range(5):
                     if self.shutdown_event.is_set():
                         return
 
                     wait = min(2**i, 60)
-                    logger.debug(f"Retrying in {wait} seconds...")
+                    self.logger.debug(f"Retrying in {wait} seconds...")
                     if self.shutdown_event.wait(wait):
                         return
                     try:
@@ -220,9 +233,9 @@ class DynamoAsyncClient:
                         break
 
                     except Exception as e:
-                        logger.debug(f"Retrying failed: {e}")
+                        self.logger.debug(f"Retrying failed: {e}")
                 else:
-                    logger.debug(
+                    self.logger.debug(
                         "Failed to refresh credentials after multiple attempts"
                     )
 
@@ -299,7 +312,7 @@ class DynamoAsyncClient:
                         retry_delay = self.base_backoff * (2**retries) + random.uniform(
                             0, 0.1
                         )
-                        logger.warning(
+                        self.logger.warning(
                             f"AWS error {error_code} — Retrying in {retry_delay:.2f}s..."
                         )
                         retries += 1
@@ -316,13 +329,13 @@ class DynamoAsyncClient:
                     retry_delay = self.base_backoff * (2**retries) + random.uniform(
                         0, 0.1
                     )
-                    logger.warning(
+                    self.logger.warning(
                         f"Request failed — Retrying in {retry_delay:.2f}s... [{e}]"
                     )
                     retries += 1
                     await asyncio.sleep(retry_delay)
                 else:
-                    logger.error(f"Max retries reached. Failed with error: {e}")
+                    self.logger.error(f"Max retries reached. Failed with error: {e}")
                     raise
 
     async def get_item(self, payload: Dict[str, Any]):
