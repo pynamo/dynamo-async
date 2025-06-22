@@ -210,7 +210,13 @@ class DynamoAsyncClient:
                 self.access_key = credentials["AccessKeyId"]
                 self.secret_key = credentials["SecretAccessKey"]
                 self.session_token = credentials["Token"]
-                self.expiration = credentials["Expiration"]
+                self.expiration = datetime.datetime.fromisoformat(
+                    credentials["Expiration"]
+                )
+                self.logger.debug(
+                    "Updated credentials. Expires: %s",
+                    self.expiration,
+                )
             except Exception as err:
                 self.logger.error(f"Failed to refresh credentials (ec2): {err}")
                 # Retry with exponential backoff
@@ -229,7 +235,13 @@ class DynamoAsyncClient:
                         self.access_key = credentials["AccessKeyId"]
                         self.secret_key = credentials["SecretAccessKey"]
                         self.session_token = credentials["Token"]
-                        self.expiration = credentials["Expiration"]
+                        self.expiration = datetime.datetime.fromisoformat(
+                            credentials["Expiration"]
+                        )
+                        self.logger.debug(
+                            "Updated credentials. Expires: %s",
+                            self.expiration,
+                        )
                         break
 
                     except Exception as e:
