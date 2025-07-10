@@ -382,3 +382,14 @@ class DynamoAsyncClient:
         :rtype: Dict[str, Any]
         """
         return await self._request("DynamoDB_20120810.DeleteItem", payload)
+
+    async def transact_write_items(self, payload: Dict[str, Any]):
+        """
+        Perform a DynamoDB TransactWriteItems request.
+
+        :param payload: TransactWriteItems request payload.
+        :type payload: Dict[str, Any]
+        :return: Parsed JSON response from DynamoDB.
+        :rtype: Dict[str, Any]
+        """
+        return await self._request("DynamoDB_20120810.TransactWriteItems", payload)
